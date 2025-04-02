@@ -26,7 +26,7 @@ parser.add_argument('--epochs', type=int, default=50000) # epochs parameter spec
 parser.add_argument('--timesteps', type=int, default=250)
 parser.add_argument('--save_and_sample_every', type=int, default=1000)
 parser.add_argument('--with_condition', action='store_true')
-parser.add_argument('-r', '--resume_weight', type=str, default="model/model_128.pt")
+parser.add_argument('-r', '--resume_weight', type=str, default="")
 args = parser.parse_args()
 
 inputfolder = args.inputfolder
