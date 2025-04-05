@@ -15,6 +15,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--inputfolder', type=str, default="dataset/mask/")
 parser.add_argument('-t', '--targetfolder', type=str, default="dataset/image/")
+parser.add_argument('-i', '--val_inputfolder', type=str, default=None)
+parser.add_argument('-t', '--val_targetfolder', type=str, default=None)
 parser.add_argument('--input_size', type=int, default=128)
 parser.add_argument('--depth_size', type=int, default=128)
 parser.add_argument('--num_channels', type=int, default=64)
@@ -31,6 +33,8 @@ args = parser.parse_args()
 
 inputfolder = args.inputfolder
 targetfolder = args.targetfolder
+val_inputfolder = args.val_inputfolder
+val_targetfolder = args.val_targetfolder
 input_size = args.input_size
 depth_size = args.depth_size
 num_channels = args.num_channels
@@ -66,9 +70,24 @@ if with_condition:
         target_transform=transform,
         full_channel_mask=True
     )
+    val_dataset = NiftiPairImageGenerator(
+        val_inputfolder,
+        val_targetfolder,
+        input_size=input_size,
+        depth_size=depth_size,
+        transform=input_transform if with_condition else transform,
+        target_transform=transform,
+        full_channel_mask=True
+    )
 else:
     dataset = NiftiImageGenerator(
         inputfolder,
+        input_size=input_size,
+        depth_size=depth_size,
+        transform=transform
+    )
+    val_dataset = NiftiImageGenerator(
+        val_inputfolder,
         input_size=input_size,
         depth_size=depth_size,
         transform=transform
@@ -100,6 +119,7 @@ if len(resume_weight) > 0:
 trainer = Trainer(
     diffusion,
     dataset,
+    val_dataset=val_dataset,
     image_size = input_size,
     depth_size = depth_size,
     train_batch_size = args.batchsize,

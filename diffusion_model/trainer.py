@@ -295,10 +295,12 @@ class Trainer(object):
         self,
         diffusion_model,
         dataset,
+        val_dataset = None,
         ema_decay = 0.995,
         image_size = 128,
         depth_size = 128,
         train_batch_size = 2,
+        val_batch_size = 4,
         train_lr = 2e-6,
         train_num_steps = 100000,
         gradient_accumulate_every = 2,
@@ -306,6 +308,7 @@ class Trainer(object):
         step_start_ema = 2000,
         update_ema_every = 10,
         save_and_sample_every = 1000,
+        eval_every = 1000,
         results_folder = './results',
         with_condition = False,
         with_pairwised = False):
@@ -317,6 +320,7 @@ class Trainer(object):
 
         self.step_start_ema = step_start_ema
         self.save_and_sample_every = save_and_sample_every
+        self.eval_every = eval_every
 
         self.batch_size = train_batch_size
         self.image_size = diffusion_model.image_size
@@ -326,6 +330,9 @@ class Trainer(object):
 
         self.ds = dataset
         self.dl = cycle(data.DataLoader(self.ds, batch_size = train_batch_size, shuffle=True, num_workers=4, pin_memory=True))
+        self.val_ds = val_dataset
+        if (self.val_ds):
+            self.val_dl = cycle(data.DataLoader(self.val_ds, batch_size = val_batch_size, shuffle=True, num_workers=4, pin_memory=True))
         self.opt = Adam(diffusion_model.parameters(), lr=train_lr)
         self.train_lr = train_lr
         self.train_batch_size = train_batch_size
@@ -373,6 +380,31 @@ class Trainer(object):
         self.step = data['step']
         self.model.load_state_dict(data['model'])
         self.ema_model.load_state_dict(data['ema'])
+
+    @torch.no_grad()
+    def evaluate(self):
+        if not hasattr(self, 'val_dl'):
+            return None
+            
+        self.ema_model.eval()
+        total_loss = 0
+        total_items = 0
+        
+        for data in self.val_dl:
+            if self.with_condition:
+                input_tensors = data['input'].cuda()
+                target_tensors = data['target'].cuda()
+                loss = self.ema_model(target_tensors, condition_tensors=input_tensors)
+            else:
+                data = data.cuda()
+                loss = self.ema_model(data)
+                
+            batch_size = target_tensors.size(0) if self.with_condition else data.size(0)
+            total_loss += loss.sum().item() * batch_size
+            total_items += batch_size
+        
+        avg_loss = total_loss / total_items
+        return avg_loss
 
     def train(self):
         backwards = partial(loss_backwards, self.fp16)
@@ -424,6 +456,11 @@ class Trainer(object):
                 nib.save(nifti_img, str(self.results_folder / f'sample-{milestone}.nii.gz'))
                
                 self.save(milestone)
+            
+            if self.step % self.eval_every == 0 and hasattr(self, 'val_dl'):
+                val_loss = self.evaluate()
+                self.writer.add_scalar("val_loss", val_loss, self.step)
+                self.ema_model.train()
 
             self.step += 1
 
