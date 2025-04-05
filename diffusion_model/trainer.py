@@ -300,7 +300,7 @@ class Trainer(object):
         image_size = 128,
         depth_size = 128,
         train_batch_size = 2,
-        val_batch_size = 4,
+        val_batch_size = 1,
         train_lr = 2e-6,
         train_num_steps = 100000,
         gradient_accumulate_every = 2,
@@ -332,7 +332,7 @@ class Trainer(object):
         self.dl = cycle(data.DataLoader(self.ds, batch_size = train_batch_size, shuffle=True, num_workers=4, pin_memory=True))
         self.val_ds = val_dataset
         if (self.val_ds):
-            self.val_dl = cycle(data.DataLoader(self.val_ds, batch_size = val_batch_size, shuffle=True, num_workers=4, pin_memory=True))
+            self.val_dl = data.DataLoader(self.val_ds, batch_size = val_batch_size, shuffle=True, num_workers=4, pin_memory=True)
         self.opt = Adam(diffusion_model.parameters(), lr=train_lr)
         self.train_lr = train_lr
         self.train_batch_size = train_batch_size
@@ -458,7 +458,7 @@ class Trainer(object):
                
                 self.save(milestone)
             
-            if self.step != 0 and self.step % self.eval_every == 0 and not self.val_ds:
+            if self.step % self.eval_every == 0 and not self.val_ds:
                 val_loss = self.evaluate()
                 self.writer.add_scalar("val_loss", val_loss, self.step)
                 self.ema_model.train()
