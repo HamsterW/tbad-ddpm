@@ -27,6 +27,7 @@ parser.add_argument('--batchsize', type=int, default=1)
 parser.add_argument('--epochs', type=int, default=50000) # epochs parameter specifies the number of training iterations
 parser.add_argument('--timesteps', type=int, default=250)
 parser.add_argument('--save_and_sample_every', type=int, default=1000)
+parser.add_argument('--eval_every', type=int, default=1000)
 parser.add_argument('--with_condition', action='store_true')
 parser.add_argument('-r', '--resume_weight', type=str, default="")
 args = parser.parse_args()
@@ -42,6 +43,7 @@ num_channels = args.num_channels
 num_res_blocks = args.num_res_blocks
 num_class_labels = args.num_class_labels
 save_and_sample_every = args.save_and_sample_every
+eval_every = args.eval_every
 with_condition = args.with_condition
 resume_weight = args.resume_weight
 train_lr = args.train_lr
@@ -133,6 +135,7 @@ trainer = Trainer(
     fp16 = False,#True,                       # turn on mixed precision training with apex
     with_condition=with_condition,
     save_and_sample_every = save_and_sample_every,
+    eval_every=eval_every
 )
 
 trainer.train()

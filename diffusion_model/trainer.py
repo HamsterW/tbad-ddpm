@@ -300,7 +300,7 @@ class Trainer(object):
         image_size = 128,
         depth_size = 128,
         train_batch_size = 2,
-        val_batch_size = 1,
+        val_batch_size = 2,
         train_lr = 2e-6,
         train_num_steps = 100000,
         gradient_accumulate_every = 2,
@@ -458,7 +458,7 @@ class Trainer(object):
                
                 self.save(milestone)
             
-            if self.step % self.eval_every == 0 and not self.val_ds:
+            if self.step % self.eval_every == 0 and hasattr(self, 'val_dl'):
                 val_loss = self.evaluate()
                 self.writer.add_scalar("val_loss", val_loss, self.step)
                 self.ema_model.train()
