@@ -1,1 +1,1 @@
-python3 ../train.py --with_condition --inputfolder ../../labels --targetfolder ../../images --batchsize 1 --epochs 100000 --input_size 256 --depth_size 256 --num_channels 64 --num_res_blocks 1 --timesteps 250 --save_and_sample_every 1000
+python3 ../train.py --with_condition --inputfolder ../../labels --targetfolder ../../images --batchsize 1 --epochs 100000 --input_size 128 --depth_size 128 --num_channels 64 --num_res_blocks 1 --timesteps 250 --save_and_sample_every 1000

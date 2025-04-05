@@ -35,6 +35,7 @@ inputfolder = args.inputfolder
 targetfolder = args.targetfolder
 val_inputfolder = args.val_inputfolder
 val_targetfolder = args.val_targetfolder
+val_dataset = None
 input_size = args.input_size
 depth_size = args.depth_size
 num_channels = args.num_channels

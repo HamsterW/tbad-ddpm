@@ -404,6 +404,7 @@ class Trainer(object):
             total_items += batch_size
         
         avg_loss = total_loss / total_items
+        print(f'Eval Step {self.step}: {loss.item()}')
         return avg_loss
 
     def train(self):
@@ -457,7 +458,7 @@ class Trainer(object):
                
                 self.save(milestone)
             
-            if self.step % self.eval_every == 0 and hasattr(self, 'val_dl'):
+            if self.step != 0 and self.step % self.eval_every == 0 and not self.val_ds:
                 val_loss = self.evaluate()
                 self.writer.add_scalar("val_loss", val_loss, self.step)
                 self.ema_model.train()
