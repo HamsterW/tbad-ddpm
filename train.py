@@ -15,8 +15,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--inputfolder', type=str, default="dataset/mask/")
 parser.add_argument('-t', '--targetfolder', type=str, default="dataset/image/")
-parser.add_argument('-i', '--val_inputfolder', type=str, default=None)
-parser.add_argument('-t', '--val_targetfolder', type=str, default=None)
+parser.add_argument('--val_inputfolder', type=str, default=None)
+parser.add_argument('--val_targetfolder', type=str, default=None)
 parser.add_argument('--input_size', type=int, default=128)
 parser.add_argument('--depth_size', type=int, default=128)
 parser.add_argument('--num_channels', type=int, default=64)
@@ -70,14 +70,15 @@ if with_condition:
         target_transform=transform,
         full_channel_mask=True
     )
-    val_dataset = NiftiPairImageGenerator(
-        val_inputfolder,
-        val_targetfolder,
-        input_size=input_size,
-        depth_size=depth_size,
-        transform=input_transform if with_condition else transform,
-        target_transform=transform,
-        full_channel_mask=True
+    if val_inputfolder:
+        val_dataset = NiftiPairImageGenerator(
+            val_inputfolder,
+            val_targetfolder,
+            input_size=input_size,
+            depth_size=depth_size,
+            transform=input_transform if with_condition else transform,
+            target_transform=transform,
+            full_channel_mask=True
     )
 else:
     dataset = NiftiImageGenerator(
@@ -86,12 +87,13 @@ else:
         depth_size=depth_size,
         transform=transform
     )
-    val_dataset = NiftiImageGenerator(
-        val_inputfolder,
-        input_size=input_size,
-        depth_size=depth_size,
-        transform=transform
-    )
+    if val_inputfolder:
+        val_dataset = NiftiImageGenerator(
+            val_inputfolder,
+            input_size=input_size,
+            depth_size=depth_size,
+            transform=transform
+        )
 
 print(len(dataset))
 
