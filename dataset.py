@@ -21,10 +21,17 @@ class NiftiImageGenerator(Dataset):
         self.inputfiles = glob(os.path.join(imagefolder, '*.nii.gz'))
         self.scaler = MinMaxScaler()
         self.transform = transform
+        self.normalize_ct = self.normalize_ct
+
+    def normalize_ct(volume, hu_min=-1000, hu_max=2000):
+        volume = np.clip(volume, hu_min, hu_max)
+        volume = (volume - hu_min) / (hu_max - hu_min)  # [0, 1]
+        volume = volume * 2 - 1                          # [-1, 1]
+        return volume
 
     def read_image(self, file_path):
         img = nib.load(file_path).get_fdata()
-        img = self.scaler.fit_transform(img.reshape(-1, img.shape[-1])).reshape(img.shape) # 0 -> 1 scale
+        img = self.normalize_ct(img)
         return img
 
     def plot_samples(self, n_slice=15, n_row=4):
@@ -76,6 +83,7 @@ class NiftiPairImageGenerator(Dataset):
         self.target_transform = target_transform
         self.full_channel_mask = full_channel_mask
         self.combine_output = combine_output
+        self.normalize_ct = self.normalize_ct()
 
     def pair_file(self):
         input_files = sorted(glob(os.path.join(self.input_folder, '*')))
@@ -92,10 +100,15 @@ class NiftiPairImageGenerator(Dataset):
         result_img[masked_img==LabelEnum.TUMORAREA.value, 1] = 1
         return result_img
 
+    def normalize_ct(volume, hu_min=0, hu_max=4095):
+        volume = np.clip(volume, hu_min, hu_max)
+        volume = (volume - hu_min) / (hu_max - hu_min)  # [0, 1]
+        return volume
+
     def read_image(self, file_path, pass_scaler=False):
         img = nib.load(file_path).get_fdata()
         if not pass_scaler:
-            img = self.scaler.fit_transform(img.reshape(-1, img.shape[-1])).reshape(img.shape) # 0 -> 1 scale
+            img = self.normalize_ct(img)
         return img
 
     def plot(self, index, n_slice=30):
