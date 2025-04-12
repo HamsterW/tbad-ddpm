@@ -24,6 +24,7 @@ import datetime
 import time
 import os
 import warnings
+from sklearn.model_selection import KFold
 warnings.filterwarnings("ignore", category=UserWarning)
 
 try:
@@ -311,7 +312,8 @@ class Trainer(object):
         eval_every = 1000,
         results_folder = './results',
         with_condition = False,
-        with_pairwised = False):
+        with_pairwised = False,
+        with_k_folds = False):
         super().__init__()
         self.model = diffusion_model
         self.ema = EMA(ema_decay)
@@ -323,16 +325,28 @@ class Trainer(object):
         self.eval_every = eval_every
 
         self.batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
         self.image_size = diffusion_model.image_size
         self.depth_size = depth_size
         self.gradient_accumulate_every = gradient_accumulate_every
         self.train_num_steps = train_num_steps
+        self.with_k_folds = with_k_folds
 
         self.ds = dataset
-        self.dl = cycle(data.DataLoader(self.ds, batch_size = train_batch_size, shuffle=True, num_workers=4, pin_memory=True))
-        self.val_ds = val_dataset
-        if (self.val_ds):
-            self.val_dl = data.DataLoader(self.val_ds, batch_size = val_batch_size, shuffle=True, num_workers=4, pin_memory=True)
+        if (self.with_k_folds):
+            self.k_index = 0
+            self.k_fold = 5
+            self.k_fold_epochs = 1000
+            self.dataset_size = len(self.ds)
+            self.all_indices = [i for i in range(self.dataset_size)]
+            split_length = self.dataset_size
+            self.k_split_index = [i * split_length for i in range(self.k_fold)]
+            self.kfold_cross_validation()
+        else:
+            self.dl = cycle(data.DataLoader(self.ds, batch_size = self.batch_size, shuffle=True, num_workers=4, pin_memory=True))
+            self.val_ds = val_dataset
+            if (self.val_ds):
+                self.val_dl = data.DataLoader(self.val_ds, batch_size = self.val_batch_size, shuffle=False, num_workers=4, pin_memory=True)
         self.opt = Adam(diffusion_model.parameters(), lr=train_lr)
         self.train_lr = train_lr
         self.train_batch_size = train_batch_size
@@ -350,6 +364,18 @@ class Trainer(object):
         self.log_dir = self.create_log_dir()
         self.writer = SummaryWriter(log_dir=self.log_dir)#"./logs")
         self.reset_parameters()
+
+    def kfold_cross_validation(self):
+        val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[self.k_index + 1])]
+        train_indices = list(set(self.all_indices) - set(val_indices))
+        # Create train and validation subsets
+        train_subset = data.Subset(self.ds, train_indices)
+        val_subset = data.Subset(self.ds, val_indices)
+
+        # DataLoader for batching
+        self.dl = data.DataLoader(train_subset, batch_size=self.batch_size, shuffle=True)
+        self.val_ds = data.DataLoader(val_subset, batch_size=self.val_batch_size, shuffle=False)
+        self.k_index += 1
 
     def create_log_dir(self):
         now = datetime.datetime.now().strftime("%y-%m-%dT%H%M%S")
@@ -462,6 +488,9 @@ class Trainer(object):
                 val_loss = self.evaluate()
                 self.writer.add_scalar("val_loss", val_loss, self.step)
                 self.ema_model.train()
+
+            if self.step % self.k_fold_epochs == 0 and self.with_k_folds:
+                self.kfold_cross_validation()
 
             self.step += 1
 

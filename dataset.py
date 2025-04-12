@@ -22,7 +22,7 @@ class NiftiImageGenerator(Dataset):
         self.scaler = MinMaxScaler()
         self.transform = transform
 
-    def normalize_ct(self, volume, hu_min=-1000, hu_max=2000):
+    def normalize_ct(self, volume, hu_min=0, hu_max=4095):
         volume = np.clip(volume, hu_min, hu_max)
         volume = (volume - hu_min) / (hu_max - hu_min)  # [0, 1]
         return volume

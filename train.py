@@ -24,11 +24,13 @@ parser.add_argument('--num_res_blocks', type=int, default=1)
 parser.add_argument('--num_class_labels', type=int, default=3)
 parser.add_argument('--train_lr', type=float, default=1e-5)
 parser.add_argument('--batchsize', type=int, default=1)
+parser.add_argument('--val_batchsize', type=int, default=1)
 parser.add_argument('--epochs', type=int, default=50000) # epochs parameter specifies the number of training iterations
 parser.add_argument('--timesteps', type=int, default=250)
 parser.add_argument('--save_and_sample_every', type=int, default=1000)
 parser.add_argument('--eval_every', type=int, default=1000)
 parser.add_argument('--with_condition', action='store_true')
+parser.add_argument('--with_k_folds', action='store_true')
 parser.add_argument('-r', '--resume_weight', type=str, default="")
 args = parser.parse_args()
 
@@ -45,8 +47,12 @@ num_class_labels = args.num_class_labels
 save_and_sample_every = args.save_and_sample_every
 eval_every = args.eval_every
 with_condition = args.with_condition
+with_k_folds = args.with_k_folds
 resume_weight = args.resume_weight
 train_lr = args.train_lr
+
+if (with_k_folds and (val_targetfolder or val_inputfolder)):
+    raise ValueError("Can not have validation dataset when k_folds is selected!")
 
 # input tensor: (B, 1, H, W, D)  value range: [-1, 1]
 transform = Compose([
@@ -73,7 +79,7 @@ if with_condition:
         target_transform=transform,
         full_channel_mask=True
     )
-    if val_inputfolder:
+    if val_inputfolder and val_targetfolder:
         val_dataset = NiftiPairImageGenerator(
             val_inputfolder,
             val_targetfolder,
@@ -90,7 +96,7 @@ else:
         depth_size=depth_size,
         transform=transform
     )
-    if val_inputfolder:
+    if val_inputfolder and val_targetfolder:
         val_dataset = NiftiImageGenerator(
             val_inputfolder,
             input_size=input_size,
@@ -128,6 +134,7 @@ trainer = Trainer(
     image_size = input_size,
     depth_size = depth_size,
     train_batch_size = args.batchsize,
+    val_batch_size = args.val_batch_size,
     train_lr = train_lr,
     train_num_steps = args.epochs,         # total training steps
     gradient_accumulate_every = 2,    # gradient accumulation steps
@@ -135,7 +142,8 @@ trainer = Trainer(
     fp16 = False,#True,                       # turn on mixed precision training with apex
     with_condition=with_condition,
     save_and_sample_every = save_and_sample_every,
-    eval_every=eval_every
+    eval_every=eval_every,
+    with_k_folds=with_k_folds,
 )
 
 trainer.train()

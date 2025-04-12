@@ -27,8 +27,8 @@ no_FLT_size = len(no_FLT)
 print(f"No. of FLT = {FLT_size}")
 print(f"No. of no FLT = {no_FLT_size}")
 
-FLT_split_index = [(train_split) * FLT_size, (train_split + val_split) * FLT_size]
-no_FLT_split_index = [(train_split) * no_FLT_size, (train_split + val_split) * no_FLT_size]
+FLT_split_index = [int((train_split) * FLT_size), int((train_split + val_split) * FLT_size)]
+no_FLT_split_index = [int((train_split) * no_FLT_size), int((train_split + val_split) * no_FLT_size)]
 
 for i in range(FLT_split_index[0]):
     shutil.copy(f"{label_dir}/{has_FLT[i]}_label.nii.gz", "train_labels")
