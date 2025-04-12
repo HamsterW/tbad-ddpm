@@ -54,6 +54,9 @@ train_lr = args.train_lr
 if (with_k_folds and (val_targetfolder or val_inputfolder)):
     raise ValueError("Can not have validation dataset when k_folds is selected!")
 
+in_channels = num_class_labels if with_condition else 1
+out_channels = 1
+
 # input tensor: (B, 1, H, W, D)  value range: [-1, 1]
 transform = Compose([
     Lambda(lambda t: torch.tensor(t).float()),
@@ -77,7 +80,8 @@ if with_condition:
         depth_size=depth_size,
         transform=input_transform if with_condition else transform,
         target_transform=transform,
-        full_channel_mask=True
+        full_channel_mask=True,
+        input_channel=in_channels,
     )
     if val_inputfolder and val_targetfolder:
         val_dataset = NiftiPairImageGenerator(
@@ -106,9 +110,6 @@ else:
 
 print(len(dataset))
 
-in_channels = num_class_labels if with_condition else 1
-out_channels = 1
-
 
 model = create_model(input_size, num_channels, num_res_blocks, in_channels=in_channels, out_channels=out_channels).cuda()
 
@@ -134,7 +135,7 @@ trainer = Trainer(
     image_size = input_size,
     depth_size = depth_size,
     train_batch_size = args.batchsize,
-    val_batch_size = args.val_batch_size,
+    val_batch_size = args.val_batchsize,
     train_lr = train_lr,
     train_num_steps = args.epochs,         # total training steps
     gradient_accumulate_every = 2,    # gradient accumulation steps

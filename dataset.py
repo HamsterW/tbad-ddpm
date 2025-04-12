@@ -93,8 +93,9 @@ class NiftiPairImageGenerator(Dataset):
 
     def label2masks(self, masked_img):
         result_img = np.zeros(masked_img.shape + ( self.input_channel - 1,))
-        result_img[masked_img==LabelEnum.BRAINAREA.value, 0] = 1
-        result_img[masked_img==LabelEnum.TUMORAREA.value, 1] = 1
+        result_img[masked_img==LabelEnum.TL.value, 0] = 1
+        result_img[masked_img==LabelEnum.FL.value, 1] = 1
+        result_img[masked_img==LabelEnum.FLT.value, 2] = 1
         return result_img
 
     def normalize_ct(self, volume, hu_min=0, hu_max=4095):

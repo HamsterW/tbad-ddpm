@@ -339,7 +339,7 @@ class Trainer(object):
             self.k_fold_epochs = 1000
             self.dataset_size = len(self.ds)
             self.all_indices = [i for i in range(self.dataset_size)]
-            split_length = self.dataset_size
+            split_length = int(self.dataset_size / self.k_fold)
             self.k_split_index = [i * split_length for i in range(self.k_fold)]
             self.kfold_cross_validation()
         else:
@@ -366,16 +366,16 @@ class Trainer(object):
         self.reset_parameters()
 
     def kfold_cross_validation(self):
-        val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[self.k_index + 1])]
+        val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[(self.k_index + 1) % 5])]
         train_indices = list(set(self.all_indices) - set(val_indices))
         # Create train and validation subsets
-        train_subset = data.Subset(self.ds, train_indices)
         val_subset = data.Subset(self.ds, val_indices)
+        train_subset = data.Subset(self.ds, train_indices)
 
         # DataLoader for batching
-        self.dl = data.DataLoader(train_subset, batch_size=self.batch_size, shuffle=True)
-        self.val_ds = data.DataLoader(val_subset, batch_size=self.val_batch_size, shuffle=False)
-        self.k_index += 1
+        self.dl = cycle(data.DataLoader(train_subset, batch_size=self.batch_size, shuffle=True))
+        self.val_ds = cycle(data.DataLoader(val_subset, batch_size=self.val_batch_size, shuffle=False))
+        self.k_index = (self.k_index + 1) % 5
 
     def create_log_dir(self):
         now = datetime.datetime.now().strftime("%y-%m-%dT%H%M%S")

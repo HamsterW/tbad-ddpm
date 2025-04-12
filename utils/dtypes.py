@@ -3,8 +3,9 @@ from enum import IntEnum, Enum
 
 class LabelEnum(IntEnum):
     BACKGROUND = 0
-    TUMORAREA = 2
-    BRAINAREA = 1
+    FL = 2
+    TL = 1
+    FLT = 3
 
 class FilterMethods(Enum):
     CUBIC = "CUBIC"
