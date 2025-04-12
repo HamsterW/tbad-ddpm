@@ -367,6 +367,7 @@ class Trainer(object):
 
     def kfold_cross_validation(self):
         val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[(self.k_index + 1) % 5])]
+        print(f"K-folds validation set from index {val_indices[0]} to {val_indices[-1]}")
         train_indices = list(set(self.all_indices) - set(val_indices))
         # Create train and validation subsets
         val_subset = data.Subset(self.ds, val_indices)
