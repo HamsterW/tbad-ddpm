@@ -340,7 +340,7 @@ class Trainer(object):
             self.dataset_size = len(self.ds)
             self.all_indices = [i for i in range(self.dataset_size)]
             split_length = int(self.dataset_size / self.k_fold)
-            self.k_split_index = [i * split_length for i in range(self.k_fold)]
+            self.k_split_index = [i * split_length for i in range(self.k_fold + 1)]
             self.kfold_cross_validation()
         else:
             self.dl = cycle(data.DataLoader(self.ds, batch_size = self.batch_size, shuffle=True, num_workers=4, pin_memory=True))
@@ -366,17 +366,20 @@ class Trainer(object):
         self.reset_parameters()
 
     def kfold_cross_validation(self):
-        val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[(self.k_index + 1) % 5])]
-        print(f"K-folds validation set from index {val_indices[0]} to {val_indices[-1]}")
+        val_indices = [i for i in range(self.k_split_index[self.k_index], self.k_split_index[self.k_index + 1])]
+        print(f"K-folds validation set {val_indices}")
         train_indices = list(set(self.all_indices) - set(val_indices))
+        print(f"K-folds train set {train_indices}")
         # Create train and validation subsets
         val_subset = data.Subset(self.ds, val_indices)
         train_subset = data.Subset(self.ds, train_indices)
+        print(f"Size of val: {len(val_subset)}")
+        print(f"Size of train: {len(train_subset)}")
 
         # DataLoader for batching
         self.dl = cycle(data.DataLoader(train_subset, batch_size=self.batch_size, shuffle=True))
-        self.val_ds = cycle(data.DataLoader(val_subset, batch_size=self.val_batch_size, shuffle=False))
-        self.k_index = (self.k_index + 1) % 5
+        self.val_dl = cycle(data.DataLoader(val_subset, batch_size=self.val_batch_size, shuffle=False))
+        self.k_index = (self.k_index + 1) % self.k_fold
 
     def create_log_dir(self):
         now = datetime.datetime.now().strftime("%y-%m-%dT%H%M%S")
@@ -410,7 +413,7 @@ class Trainer(object):
 
     @torch.no_grad()
     def evaluate(self):
-        if not hasattr(self, 'val_dl'):
+        if not hasattr(self, 'val_dl') and not self.with_k_folds:
             return None
             
         self.ema_model.eval()
@@ -485,12 +488,13 @@ class Trainer(object):
                
                 self.save(milestone)
             
-            if self.step % self.eval_every == 0 and hasattr(self, 'val_dl'):
+            if self.step % self.eval_every == 0 and (hasattr(self, 'val_dl') or self.with_k_folds):
                 val_loss = self.evaluate()
                 self.writer.add_scalar("val_loss", val_loss, self.step)
+                print(f"Average loss at step {self.step}: {average_loss}")
                 self.ema_model.train()
 
-            if self.step % self.k_fold_epochs == 0 and self.with_k_folds:
+            if self.step != 0 and self.step % self.k_fold_epochs == 0 and self.with_k_folds:
                 self.kfold_cross_validation()
 
             self.step += 1
